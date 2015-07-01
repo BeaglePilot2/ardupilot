@@ -1,0 +1,15 @@
+Notes on OpenROV code -
+
+Neutrally Buoyant ROV, ie neither floats nor sinks.
+Motors spin in reverse direction with double power to compensate for thrust.
+
+Forward - Port Motor CCW, Starboard Motor CW (viewed from rear)
+Reverse - Port Motor CW, Starboard Motot CCW (viewed from rear)
+
+Left - Both Port and Starboard Motors CW (viewed from rear)
+Right - Both Port and Starboard Motors CCW (viewed from rear)
+
+Ascend - Vertical Motor CW (viewed from top)
+Descend - Vertical Motor CCW (viewed from top)
+
+TODO - Implement this steering mechanism in ardupilot.
