@@ -1,0 +1,9 @@
+@INCLUDE = docs/config/default
+
+PROJECT_NAME = "APMsubmarine"
+INPUT = APMsubmarine/
+OUTPUT_DIRECTORY = $(DOCS_OUTPUT_BASE)/APMsubmarine
+HTML_OUTPUT = .
+TAGFILES = $(DOCS_OUTPUT_BASE)/tags/libraries=../libraries
+
+
