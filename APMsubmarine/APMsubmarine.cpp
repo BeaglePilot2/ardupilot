@@ -138,8 +138,9 @@ void Submarine::ahrs_update()
     if (should_log(MASK_LOG_ATTITUDE_FAST))
         Log_Write_Attitude();
 
-    if (should_log(MASK_LOG_IMU))
-        DataFlash.Log_Write_IMU(ins);
+    if (should_log(MASK_LOG_IMU)){        
+        //DataFlash.Log_Write_IMU(ins);
+    }
 }
 
 /*
@@ -193,7 +194,7 @@ void Submarine::update_compass(void)
         // update offsets
         compass.learn_offsets();
         if (should_log(MASK_LOG_COMPASS)) {
-            DataFlash.Log_Write_Compass(compass);
+            //DataFlash.Log_Write_Compass(compass);
         }
     } else {
         ahrs.set_compass(NULL);
@@ -295,7 +296,7 @@ void Submarine::update_GPS_50Hz(void)
         if (gps.last_message_time_ms(i) != last_gps_reading[i]) {
             last_gps_reading[i] = gps.last_message_time_ms(i);
             if (should_log(MASK_LOG_GPS)) {
-                DataFlash.Log_Write_GPS(gps, i, current_loc.alt);
+                //DataFlash.Log_Write_GPS(gps, i, current_loc.alt);
             }
         }
     }
