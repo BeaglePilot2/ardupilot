@@ -360,7 +360,7 @@ void Submarine::Log_Write_Baro(void)
 }
 
 // log ahrs home and EKF origin to dataflash
-void Submarine::Log_Write_Home_And_Origin()
+/*void Submarine::Log_Write_Home_And_Origin()
 {
 #if AP_AHRS_NAVEKF_AVAILABLE
     // log ekf origin if set
@@ -374,7 +374,7 @@ void Submarine::Log_Write_Home_And_Origin()
     if (home_is_set) {
         DataFlash.Log_Write_Origin(LogOriginType::ahrs_home, ahrs.get_home());
     }
-}
+}*/
 
 const LogStructure Submarine::log_structure[] PROGMEM = {
     LOG_COMMON_STRUCTURES,
@@ -386,10 +386,10 @@ const LogStructure Submarine::log_structure[] PROGMEM = {
       "CTUN", "Qhcchf",     "TimeUS,Steer,Roll,Pitch,ThrOut,AccY" },
     { LOG_NTUN_MSG, sizeof(log_Nav_Tuning),
       "NTUN", "QHfHHb",     "TimeUS,Yaw,WpDist,TargBrg,NavBrg,Thr" },
-    { LOG_SONAR_MSG, sizeof(log_Sonar),
+    /*{ LOG_SONAR_MSG, sizeof(log_Sonar),
       "SONR", "QfHHHbHCb",  "TimeUS,LatAcc,S1Dist,S2Dist,DCnt,TAng,TTim,Spd,Thr" },
     { LOG_STEERING_MSG, sizeof(log_Steering),
-      "STER", "Qff",   "TimeUS,Demanded,Achieved" },
+      "STER", "Qff",   "TimeUS,Demanded,Achieved" },*/
 };
 
 void Submarine::log_init(void)
