@@ -86,7 +86,7 @@ void Submarine::read_sonars(void)
         }
     }
 
-    Log_Write_Sonar();
+    //Log_Write_Sonar();
 
     // no object detected - reset after the turn time
     if (obstacle.detected_count >= g.sonar_debounce &&
