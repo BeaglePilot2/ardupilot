@@ -14,11 +14,19 @@ void Submarine::send_heartbeat(mavlink_channel_t chan)
     uint8_t base_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED;
     uint8_t system_status = MAV_STATE_ACTIVE;
     uint32_t custom_mode = control_mode;
-
+    
     if (failsafe.triggered != 0) {
         system_status = MAV_STATE_CRITICAL;
     }
 
+    // work out the base_mode. This value is not very useful
+    // for APM, but we calculate it as best we can so a generic
+    // MAVLink enabled ground station can work out something about
+    // what the MAV is up to. The actual bit values are highly
+    // ambiguous for most of the APM flight modes. In practice, you
+    // only get useful information from the custom_mode, which maps to
+    // the APM flight mode and has a well defined meaning in the
+    // ArduPlane documentation
     switch (control_mode) {
     case MANUAL:
     case LEARNING:
@@ -29,6 +37,9 @@ void Submarine::send_heartbeat(mavlink_channel_t chan)
     case RTL:
     case GUIDED:
         base_mode = MAV_MODE_FLAG_GUIDED_ENABLED;
+        // note that MAV_MODE_FLAG_AUTO_ENABLED does not match what
+        // APM does in any mode, as that is defined as "system finds its own goal
+        // positions", which APM does not currently do
         break;
     case INITIALISING:
         system_status = MAV_STATE_CALIBRATING;
@@ -60,7 +71,7 @@ void Submarine::send_heartbeat(mavlink_channel_t chan)
 
     mavlink_msg_heartbeat_send(
         chan,
-        MAV_TYPE_SUBMARINE,
+        MAV_TYPE_GROUND_ROVER,
         MAV_AUTOPILOT_ARDUPILOTMEGA,
         base_mode,
         custom_mode,
@@ -186,7 +197,7 @@ void Submarine::send_location(mavlink_channel_t chan)
     // allows us to correctly calculate velocities and extrapolate
     // positions.
     // If we don't have a GPS fix then we are dead reckoning, and will
-    // use the current boot time as the fix time.
+    // use the current boot time as the fix time.    
     if (gps.status() >= AP_GPS::GPS_OK_FIX_2D) {
         fix_time = gps.last_fix_time_ms();
     } else {
@@ -211,12 +222,12 @@ void Submarine::send_nav_controller_output(mavlink_channel_t chan)
     mavlink_msg_nav_controller_output_send(
         chan,
         lateral_acceleration, // use nav_roll to hold demanded Y accel
-        //gps.ground_speed() * ins.get_gyro().z, // use nav_pitch to hold actual Y accel
+        gps.ground_speed() * ins.get_gyro().z, // use nav_pitch to hold actual Y accel
         nav_controller->nav_bearing_cd() * 0.01f,
         nav_controller->target_bearing_cd() * 0.01f,
         wp_distance,
         0,
-        //groundspeed_error,
+        groundspeed_error,
         nav_controller->crosstrack_error());
 }
 
@@ -277,8 +288,8 @@ void Submarine::send_vfr_hud(mavlink_channel_t chan)
 {
     mavlink_msg_vfr_hud_send(
         chan,
-        //gps.ground_speed(),
-        //gps.ground_speed(),
+        gps.ground_speed(),
+        gps.ground_speed(),
         (ahrs.yaw_sensor / 100) % 360,
         (uint16_t)(100 * fabsf(channel_throttle->norm_output())),
         current_loc.alt / 100.0,
@@ -343,12 +354,12 @@ void Submarine::send_rangefinder(mavlink_channel_t chan)
 /*
   send PID tuning message
  */
-void Submarine::send_pid_tuning(mavlink_channel_t chan)
+/*void Submarine::send_pid_tuning(mavlink_channel_t chan)
 {
     const Vector3f &gyro = ahrs.get_gyro();
     if (g.gcs_pid_mask & 1) {
         const DataFlash_Class::PID_Info &pid_info = steerController.get_pid_info();
-        mavlink_msg_pid_tuning_send(chan, PID_TUNING_STEER,
+        mavlink_msg_pid_tuning_send(chan, PID_TUNING_STEER, 
                                     pid_info.desired,
                                     degrees(gyro.z),
                                     pid_info.FF,
@@ -359,7 +370,7 @@ void Submarine::send_pid_tuning(mavlink_channel_t chan)
             return;
         }
     }
-}
+}*/
 
 void Submarine::send_current_waypoint(mavlink_channel_t chan)
 {
@@ -375,7 +386,8 @@ void Submarine::send_statustext(mavlink_channel_t chan)
         s->text);
 }
 
-/*bool Submarine::telemetry_delayed(mavlink_channel_t chan)
+// are we still delaying telemetry to try to avoid Xbee bricking?
+bool Submarine::telemetry_delayed(mavlink_channel_t chan)
 {
     uint32_t tnow = millis() >> 10;
     if (tnow > (uint32_t)g.telem_delay) {
@@ -388,7 +400,7 @@ void Submarine::send_statustext(mavlink_channel_t chan)
     // we're either on the 2nd UART, or no USB cable is connected
     // we need to delay telemetry by the TELEM_DELAY time
     return true;
-}*/
+}
 
 
 // try to send a message, return false if it won't fit in the serial tx buffer
@@ -411,7 +423,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
     switch (id) {
     case MSG_HEARTBEAT:
         CHECK_PAYLOAD_SIZE(HEARTBEAT);
-        submarine.gcs[chan-MAVLINK_COMM_0].last_heartbeat_time = hal.scheduler->millis();
+        submarine.gcs[chan-MAVLINK_COMM_0].last_heartbeat_time = hal.scheduler->millis();        
         submarine.send_heartbeat(chan);
         return true;
 
@@ -565,7 +577,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
 
     case MSG_PID_TUNING:
         CHECK_PAYLOAD_SIZE(PID_TUNING);
-        submarine.send_pid_tuning(chan);
+        //submarine.send_pid_tuning(chan);
         break;
 
     case MSG_RETRY_DEFERRED:
@@ -575,7 +587,7 @@ bool GCS_MAVLINK::try_send_message(enum ap_message id)
         break; // just here to prevent a warning
 	}
 
-
+    
     return true;
 }
 
@@ -677,7 +689,7 @@ bool GCS_MAVLINK::stream_trigger(enum streams stream_num)
 
     // send at a much lower rate while handling waypoints and
     // parameter sends
-    if ((stream_num != STREAM_PARAMS) &&
+    if ((stream_num != STREAM_PARAMS) && 
         (waypoint_receiving || _queued_parameter != NULL)) {
         rate *= 0.25f;
     }
@@ -783,7 +795,7 @@ GCS_MAVLINK::data_stream_send(void)
             send_message(MSG_PID_TUNING);
         }
     }
-
+    
     if (submarine.gcs_out_of_time) return;
 
     if (stream_trigger(STREAM_EXTRA2)) {
@@ -811,7 +823,7 @@ void GCS_MAVLINK::handle_guided_request(AP_Mission::Mission_Command &cmd)
         // only accept position updates when in GUIDED mode
         return;
     }
-
+        
     submarine.guided_WP = cmd.content.location;
 
     // make any new wp uploaded instant (in case we are already in Guided mode)
@@ -1149,7 +1161,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
 		{
 			mavlink_hil_state_t packet;
 			mavlink_msg_hil_state_decode(msg, &packet);
-
+			
             // set gps hil sensor
             Location loc;
             loc.lat = packet.lat;
@@ -1157,11 +1169,11 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             loc.alt = packet.alt/10;
             Vector3f vel(packet.vx, packet.vy, packet.vz);
             vel *= 0.01f;
-
+            
             gps.setHIL(0, AP_GPS::GPS_OK_FIX_3D,
                        packet.time_usec/1000,
                        loc, vel, 10, 0, true);
-
+			
 			// rad/sec
             Vector3f gyros;
             gyros.x = packet.rollspeed;
@@ -1173,7 +1185,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             accels.x = packet.xacc * (GRAVITY_MSS/1000.0f);
             accels.y = packet.yacc * (GRAVITY_MSS/1000.0f);
             accels.z = packet.zacc * (GRAVITY_MSS/1000.0f);
-
+            
             ins.set_gyro(0, gyros);
 
             ins.set_accel(0, accels);
@@ -1242,7 +1254,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
     case MAVLINK_MSG_ID_GPS_INJECT_DATA:
         handle_gps_inject(msg, submarine.gps);
         break;
-
+        
 #endif
 
     case MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST:
