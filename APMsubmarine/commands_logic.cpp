@@ -255,7 +255,7 @@ void Submarine::do_set_home(const AP_Mission::Mission_Command& cmd)
 	} else {
         ahrs.set_home(cmd.content.location);
 		home_is_set = true;
-		Log_Write_Home_And_Origin();
+		//Log_Write_Home_And_Origin();
 	}
 }
 

@@ -223,7 +223,7 @@ void Submarine::update_logging2(void)
 {
     if (should_log(MASK_LOG_STEERING)) {
         if (control_mode == STEERING || control_mode == AUTO || control_mode == RTL || control_mode == GUIDED) {
-            Log_Write_Steering();
+            //Log_Write_Steering();
         }
     }
 
