@@ -71,7 +71,7 @@ void Submarine::send_heartbeat(mavlink_channel_t chan)
 
     mavlink_msg_heartbeat_send(
         chan,
-        MAV_TYPE_GROUND_ROVER,
+        MAV_TYPE_SUBMARINE,
         MAV_AUTOPILOT_ARDUPILOTMEGA,
         base_mode,
         custom_mode,
